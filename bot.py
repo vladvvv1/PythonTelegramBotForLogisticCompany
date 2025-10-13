@@ -96,7 +96,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
-    print("BOT STARTED!")
+    print("Користувач почав заповнювати дані.")
     keyboard = [["Перевізник", "Замовник"]]
 
     await update.message.reply_text("Вітаю в програмі. Оберіть тип заявки.", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True))
@@ -110,7 +110,7 @@ async def SelectCarrierOrCustomer(update: Update, context: ContextTypes.DEFAULT_
         
     choice = update.message.text
     context.user_data["cerrier_or_customer"] = choice
-    print(choice)
+    print("Carrier or customer: ", choice)
 
     if choice == "Перевізник":
 
@@ -148,7 +148,6 @@ async def HandleTypeOfDeliveryAskTYPE1(update: Update, context: ContextTypes.DEF
         return ASK_TYPE
     
     user_input = update.message.text
-    print("Handle ytpe of delivery ask type 1 USER_INPUT: ", user_input)
 
     if user_input in ("По Україні", "Імпорт/Експорт"):
         context.user_data["step"] = 0
@@ -161,7 +160,7 @@ async def HandleTypeOfDeliveryAskTYPE1(update: Update, context: ContextTypes.DEF
 
 async def HandleTypeOfDeliveryAskTYPE2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text
-    print(user_input)
+    print("User input: ", user_input)
     context.user_data["type_of_delivery"] = user_input
 
     if user_input == "По Україні":
@@ -204,7 +203,6 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     
     user_input = update.message.text
     current_step = context.user_data.get("step", 0)
-    print(current_step)
 
     if current_step > 0:
         key, _ = QUESTIONS3[current_step - 1]
@@ -223,7 +221,7 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     
     if current_step < len(QUESTIONS3):
         key, question = QUESTIONS3[current_step]
-        print(current_step)
+        print("Current step: ")
         await update.message.reply_text(question, reply_markup=back_keyboard)
         context.user_data["step"] = current_step + 1
         return ASK_TYPE
@@ -245,7 +243,7 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         data_to_save = {k: v for k, v in context.user_data.items() if k not in ["cerrier_or_customer", "type_of_delivery", "step"]}
 
-        print(app_type)
+        print("App type: ", app_type)
             
         save_application(user_id, app_type, data_to_save)
         await send_to_broker(user_id, app_type, data_to_save)
@@ -308,6 +306,7 @@ async def AskNext2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         print(f"{key}: {user_input}")
     
     if current_step < len(QUESTIONS):
+        print("Current step: ", current_step)
         key, question = QUESTIONS[current_step]
         await update.message.reply_text(question, reply_markup=back_keyboard)
         context.user_data["step"] = current_step + 1
@@ -330,7 +329,7 @@ async def AskNext2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         data_to_save = {k: v for k, v in context.user_data.items() if k not in ["cerrier_or_customer", "type_of_delivery", "step", "QUESTIONS"]}
 
-        print(app_type)
+        print("App type: ", app_type)
             
         save_application(user_id, app_type, data_to_save)
         await send_to_broker(user_id, app_type, data_to_save)
