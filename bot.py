@@ -256,7 +256,7 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def AskNext2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.edited_message:
         await update.edited_message.reply_text("⚠️ Редагування повідомлень заборонене.")
-        return ASK_TYPE
+        return ASK_TYPE2
 
     QUESTIONS = context.user_data.get("QUESTIONS")
     

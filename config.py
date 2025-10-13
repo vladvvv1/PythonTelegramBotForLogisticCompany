@@ -1,15 +1,14 @@
 from dotenv import load_dotenv
 import os
 from supabase import create_client, Client
-from aiogram import Bot
-import asyncio
+from telegram import Bot
 
 load_dotenv()
 
-telegram_token=os.getenv("TELEGRAM_TOKEN")
-supabase_url=os.getenv("SUPABASE_URL")
-supabase_key=os.getenv("SUPABASE_KEY")
-broker_telegram_token=os.getenv("BROKER_TELEGRAM_TOKEN")
+telegram_token = os.getenv("TELEGRAM_TOKEN")
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+broker_telegram_token = os.getenv("BROKER_TELEGRAM_TOKEN")
 BROKER_CHAT_ID = int(os.getenv("BROKER_CHAT_ID", "0"))
 
 if not all([supabase_url, supabase_key, broker_telegram_token, BROKER_CHAT_ID]):
@@ -17,6 +16,7 @@ if not all([supabase_url, supabase_key, broker_telegram_token, BROKER_CHAT_ID]):
 
 supabase: Client = create_client(supabase_url, supabase_key)
 broker_bot = Bot(token=broker_telegram_token)
+
 
 def save_application(user_id: int, app_type: str, data: dict):
     """Зберігає заявку у таблицю applications."""
@@ -69,6 +69,6 @@ async def send_to_broker(user_id: int, app_type: str, data: dict):
 
     # Надсилаємо брокеру
     try:
-        await broker_bot.send_message(BROKER_CHAT_ID, text, parse_mode="HTML")
+        await broker_bot.send_message(chat_id=BROKER_CHAT_ID, text=text, parse_mode="HTML")
     except Exception as e:
         print(f"⚠️ Помилка при надсиланні брокеру: {e}")
