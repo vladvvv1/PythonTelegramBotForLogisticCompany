@@ -10,12 +10,13 @@ from telegram.ext import (
     filters,
     ContextTypes, 
     MessageHandler,
+    TypeHandler,
 )
 from config import save_application, send_to_broker
 # from handlers import start, carrier
 from config import telegram_token
 
-ASK_TYPE, SELECT_CARRIER_OR_CUSTOMER, ASK_TYPE2, AFTER_APPLICATION, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_1, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_2 = range(6)
+ASK_TYPE, SELECT_CARRIER_OR_CUSTOMER, ASK_TYPE2, AFTER_APPLICATION, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_1, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_2, EDITED_MESSAGE_HANDLER = range(7)
 CUSTOMER_OR_CERRIER = 0
 
 # 1 - carrier
@@ -145,12 +146,16 @@ async def HandleTypeOfDeliveryAskTYPE2(update: Update, context: ContextTypes.DEF
         return HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_2
    
 async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user_input = update.message.text
-
-    if not update.message or not update.message.text:
-        await update.effective_chat.send_message("Будь ласка, введіть текст.")
+    
+    if update.edited_message:
+        await update.edited_message.reply_text("⚠️ Редагування повідомлень заборонене.")
         return ASK_TYPE
 
+    if not update.message or not update.message.text:
+        await update.message.reply_text("Будь ласка, введи відповідь ще раз")
+        return ASK_TYPE
+    
+    user_input = update.message.text
     current_step = context.user_data.get("step", 0)
     print(current_step)
 
@@ -171,6 +176,7 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     
     if current_step < len(QUESTIONS3):
         key, question = QUESTIONS3[current_step]
+        print(current_step)
         await update.message.reply_text(question)
         context.user_data["step"] = current_step + 1
         return ASK_TYPE
@@ -200,19 +206,19 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await after_application(update, context)
         return AFTER_APPLICATION
 
-
 async def AskNext2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user_input = update.message.text
     
+    QUESTIONS = context.user_data.get("QUESTIONS")
+    
+    if not QUESTIONS:
+        await update.message.reply_text("Не знайдено список питань. Почніть спочатку командою /start.")
+        return ConversationHandler.END
+    
+    user_input = update.message.text
 
     if not update.message or not update.message.text:
         await update.effective_chat.send_message("Будь ласка, введіть текст.")
         return ASK_TYPE2
-    
-    QUESTIONS = context.user_data.get("QUESTIONS")
-    if not QUESTIONS:
-        await update.message.reply_text("Не знайдено список питань. Почніть спочатку командою /start.")
-        return ConversationHandler.END
     
     current_step = context.user_data.get("step", 0)
     
@@ -292,6 +298,8 @@ async def handle_after_application(update: Update, context: ContextTypes.DEFAULT
     else:
         await update.message.reply_text("Будь ласка, оберіть одну з опцій.")
         return AFTER_APPLICATION
+    
+
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancels and end the whole conversation"""
@@ -324,7 +332,8 @@ def main():
             ],
             AFTER_APPLICATION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_after_application)
-            ],  
+            ],
+            
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
@@ -359,3 +368,4 @@ if __name__ == "__main__":
 
 # TODO: записує type_of_devliery замість їбучого міста. треба шось придумати сука.
 
+# TODO: як зробити перевірку останнього на edit?
