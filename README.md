@@ -1,170 +1,130 @@
-<<<<<<< HEAD
-# PythonTelegramBotForLogisticCompany
-=======
-Logistic Helper
+# 📋 Documentation: Telegram Bot "Logistics Application System"
 
-logistics_bot/
-│
-├── bot.py                  # Основний файл запуску бота
-├── config.py               # Конфігурації: TOKEN, база даних, налаштування
-├── requirements.txt        # Бібліотеки для проекту
-│
-├── handlers/               # Обробники команд і повідомлень
-│   ├── __init__.py
-│   ├── start.py            # /start та вибір ролі користувача
-│   ├── carrier.py          # Обробка перевізників
-│   ├── shipper.py          # Обробка замовників
-│   ├── admin.py            # Обробники для адміна
-│
-├── keyboards/              # Клавіатури та кнопки
-│   ├── __init__.py
-│   ├── main.py             # Основне меню
-│   ├── role_selection.py   # Кнопки перевізник/замовник
-│
-├── models/                 # Схеми для бази даних
-│   ├── __init__.py
-│   ├── user.py
-│   ├── carrier_request.py
-│   ├── shipper_request.py
-│   ├── match.py
-│
-├── database/               # Модуль роботи з БД
-│   ├── __init__.py
-│   ├── connection.py       # Підключення до SQLite/MySQL/PostgreSQL
-│   ├── crud.py             # Створення, читання, оновлення, видалення записів
-│
-├── utils/                  # Утиліти та допоміжні функції
-│   ├── __init__.py
-│   ├── validators.py       # Перевірка дати, формату, адреси
-│   ├── notifications.py    # Надсилання повідомлень адміну або групі
-│
-└── logs/                   # Логи бота
-    └── bot.log
+## 🎯 Overview
+A Telegram bot for collecting logistics applications from carriers and customers with delivery type classification.
 
+## 🔗 Basic Commands
+- `/start` - Start conversation, clear previous data
+- `/cancel` - Cancel conversation, clear all data
 
--- Ролі у системі --
-1.1 Carrier (Transporter)
-- Domestic (within Ukraine)
-Vehicle operates only inside the country.
-- Import / Export (International)
-Vehicle can handle shipments across the border.
-May require international licenses and customs documentation.
+## 🏗 Bot Architecture
 
-1.2 Customer (Shipper)
-- Domestic (within Ukraine)
-Requests shipment within the country.
-- Import / Export (International)
-Requests shipment across the border.
-Requires customs paperwork, certifications, and special country-specific regulations.
+### Conversation States
+```python
+ASK_TYPE, SELECT_CARRIER_OR_CUSTOMER, ASK_TYPE2, AFTER_APPLICATION, 
+HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_1, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_2, 
+EDITED_MESSAGE_HANDLER = range(7)
+```
 
-Submission process with Categories
-2.1 Carrier Submission
-1. Carrier selects shipment type (Domestic or Import/Export)
-2. Bot asks for:
-- Vehicle location
-- Availability (data/time)
-- Vahicle type, dimensions, capacity
-- Special characteristics (refrigerated, open beb, covered, etc.)
-- For import/export: documentation for international transport.
-3. Data stored in the database along with the shipment category.
+### User Flow
+```
+/start → Select Role → Select Delivery Type → Answer Questions → Submit → Repeat/Finish
+```
 
-2.2 Customer Submission
-1. Customer selects shipment type (Domestic or Import / Export)
-2. Bot asks for:
-- Pickup location
-- Pickup date and time
-- Cargo type, weight, volume
-- Special instructions (fragile, hazardous, perishable, temperature requirements)
-- For import/export: customs documents, origin/destination country
-3. Data is stored in the database with the shipment category.
+## 👥 User Roles & Question Sets
 
-3. Matching Logic with Categories
-1. Bot compares shipment categories of carriers and customers:
-- Domestic → only match domestic carriers with domestic shipments.
-- Import / Export → only match international carriers with international shipments, verifying documentation.
-2. Additional matching criteria:
-- Vehicle location vs. cargo pickup location
-- Vehicle availability vs. cargo pickup time
-- Vehicle features vs. cargo requirements
+### 1. **Carrier** (`Перевізник`)
+- **Question Set**: QUESTIONS3
+- **Purpose**: Company registration for service providers
+- **Questions**:
+  - Company name
+  - Number of vehicles
+  - Operating countries
+  - Contact information
 
-1. Основна логіка
+### 2. **Customer** (`Замовник`)
+Two delivery types with different question sets:
 
-Замовник:
+#### **Domestic** (`По Україні`)
+- **Question Set**: QUESTIONS1
+- **Questions**: City, datetime, cargo type, weight, capacity, requirements, contacts, delivery place
 
-Створює заявку на перевезення вантажу.
+#### **International** (`Імпорт/Експорт`)
+- **Question Set**: QUESTIONS2  
+- **Additional Questions**: Customs point, terminal, documents, currency, customs contact
 
-Вказує всі параметри вантажу: місце забору, дату/час, тип вантажу, об’єм/вагу, особливі вимоги, категорію перевезення (по Україні або міжнародне).
+## 📊 Data Validation
 
-Його мета — знайти перевізника, який підходить під ці вимоги.
+### Validation Functions
+- `is_valid_number()` - Positive numbers for weight/capacity
+- `is_valid_phone()` - Phone number format (+XXXXXXXXXXX)
+- `is_valid_datetime()` - Date format (DD.MM.YYYY HH:MM)
 
-Перевізник:
+### Navigation
+- **Back button** (`⏪ Назад`) - Step-by-step backward navigation
+- **Edit restriction** - Message editing is blocked with warning
 
-Має список доступних вантажів (заявок від замовників), які бот йому пропонує на основі параметрів авто та категорії перевезення.
+## 💾 Data Processing
 
-Перевіряє вантажі, вибирає ті, які може забрати.
+### Storage Functions
+- `save_application(user_id, app_type, data)` - Save to database
+- `send_to_broker(user_id, app_type, data)` - Send to message broker
 
-“Бере замовлення” — бот оновлює статус заявки, і замовник бачить, що перевізник узгодив перевезення.
+### Application Types
+```python
+# Carrier
+app_type = "carrier"
 
-Перевізник → що він може доставити, коли і де його авто доступне, характеристики авто, документи (для міжнародних перевезень).
+# Customer  
+app_type = "international"  # Імпорт/Експорт
+app_type = "domestic"       # По Україні
+```
 
-Замовник → що потрібно перевезти, куди, коли, особливі вимоги, документи (для міжнародних перевезень).
+## 🛡 Error Handling
 
+### Global Error Handler
+- Catches all unhandled exceptions
+- User-friendly error messages
+- Detailed logging with traceback
 
-<<<<<<< HEAD
-Так, ти майже правильно описав, але є кілька уточнень, щоб процес був логічно точний:
+### Network Resilience
+- Automatic retry on network errors
+- 5-second delay between retries
+- Continuous polling with error recovery
 
----
+## 🔄 Post-Submission Flow
 
-## **Сценарій роботи бота**
+### After Application Options
+- **Fill again** (`Заповнити ще раз`) - Restart conversation
+- **Finish** (`Завершити`) - End conversation
 
-### **1. Замовник заходить у бота**
+### Data Cleanup
+- User data cleared after completion
+- Step counters reset
+- Role and delivery type reset
 
-1. Відкриває бота → обирає: **“Я замовник”**
-2. Обирає категорію перевезення: **“По Україні”** або **“Імпорт / Експорт”**
-3. Вводить дані про вантаж:
+## 🚀 Deployment
 
-   * Місце забору
-   * Дату та час, коли вантаж потрібно забрати
-   * Тип вантажу, вага, об’єм
-   * Особливі вимоги (температура, крихкий, небезпечний тощо)
-4. Вводить, якщо потрібно, додаткові параметри (наприклад, чи вантаж потребує спеціального авто).
+### Requirements
+- Python 3.7+
+- python-telegram-bot library
+- Telegram Bot Token
 
----
+### Key Features
+- ✅ Persistent conversation states
+- ✅ Data validation
+- ✅ Error recovery
+- ✅ User-friendly navigation
+- ✅ Multi-language support (Ukrainian)
+- ✅ Network resilience
 
-### **2. Збереження заявки**
+## 📝 Usage Example
 
-* Бот зберігає усі дані у базі.
-* Замовник отримує підтвердження: “Ваша заявка прийнята. Чекайте, поки перевізник візьме її у роботу.”
+```
+User: /start
+Bot: Welcome! Choose application type [Carrier/Customer]
 
----
+User: Customer  
+Bot: Choose delivery type [Domestic/International]
 
-### **3. Далі вступає перевізник**
+User: International
+Bot: [Question 1]: Specify pickup location...
+[Continues through all questions]
 
-1. Перевізник заходить у бота → обирає: **“Я перевізник”**
-2. Бот показує список доступних вантажів, відфільтрованих за параметрами його авто та категорією перевезення.
-3. Перевізник вибирає вантаж → підтверджує, що він його забере.
+Bot: Thank you! Data saved. [Repeat/Finish options]
+```
 
----
-
-### **4. Підтвердження замовнику**
-
-* Замовник отримує повідомлення:
-  “Ваш вантаж буде перевезено перевізником [Ім’я], авто [тип/розміри], дата забору [дата/час].”
-* Статус заявки оновлюється на “Вантаж взято у перевезення”.
-
----
-
-💡 **Підсумок:**
-
-1. Замовник → створює заявку і чекає.
-2. Перевізник → бачить заявки → обирає, що може забрати.
-3. Бот → зв’язує замовника і перевізника, оновлює статус.
-
----
-
-Якщо хочеш, я можу зробити **графічну блок-схему цього процесу** з усіма кроками для замовника та перевізника. Це буде наочно і дуже допоможе для розробки бота.
-
-Хочеш, щоб я її зробив?
->>>>>>> 68ce251 (Carrier.py working on)
-=======
->>>>>>> 2ffbd9a (Beta1. Project working but with errors)
+## 🔧 Configuration
+- Token stored in `telegram_token`
+- Modular handler structure
+- Easy to extend with new question sets
