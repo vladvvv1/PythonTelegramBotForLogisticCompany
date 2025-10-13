@@ -11,10 +11,12 @@ from telegram.ext import (
     ContextTypes, 
     MessageHandler,
     TypeHandler,
+    
 )
 from config import save_application, send_to_broker
 # from handlers import start, carrier
 from config import telegram_token
+import traceback
 
 ASK_TYPE, SELECT_CARRIER_OR_CUSTOMER, ASK_TYPE2, AFTER_APPLICATION, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_1, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_2, EDITED_MESSAGE_HANDLER = range(7)
 CUSTOMER_OR_CERRIER = 0
@@ -56,6 +58,8 @@ QUESTIONS3 = (
     ("contacts", "Контакти: ")
 )
 
+back_keyboard = ReplyKeyboardMarkup([["⏪ Назад"]], resize_keyboard=True)
+
 def is_valid_number(text):
     try:
         return float(text) > 0
@@ -72,6 +76,33 @@ def is_valid_datetime(text):
     except ValueError:
         return False
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    error = context.error
+    user_id = update.effective_user.id if update and hasattr(update, 'effective_user') else None
+    
+    print(f"⚠️ Помилка для користувача {user_id}: {type(error).__name__}: {error}")
+    
+    # Логування повного трейсбеку
+    with open("bot_errors.log", "a", encoding="utf-8") as f:
+        f.write(f"\n{datetime.now()} - User {user_id}:\n")
+        traceback.print_exception(type(error), error, error.__traceback__, file=f)
+
+    # Різні повідомлення для різних типів помилок
+    error_message = "⚠️ Сталася технічна помилка. Спробуйте ще раз."
+    
+    if isinstance(error, NetworkError):
+        error_message = "🔌 Проблеми з мережею. Спробуйте через кілька хвилин."
+    elif isinstance(error, TimedOut):
+        error_message = "⏰ Час очікування вийшов. Спробуйте ще раз."
+    
+    
+    # Відправка повідомлення користувачу
+    try:
+        if update and hasattr(update, "message") and update.message:
+            await update.message.reply_text(error_message)
+    except Exception as e:
+        print(f"Не вдалося відправити повідомлення про помилку: {e}")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     print("BOT STARTED!")
@@ -81,7 +112,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return SELECT_CARRIER_OR_CUSTOMER
 
-async def SelectCarrierOrCustomer(update: Update, context: ContextTypes.DEFAULT_TYPE):    
+async def SelectCarrierOrCustomer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.edited_message:
+        await update.edited_message.reply_text("⚠️ Редагування повідомлень заборонене.")
+        return ASK_TYPE
+        
     choice = update.message.text
     context.user_data["cerrier_or_customer"] = choice
     print(choice)
@@ -116,6 +151,11 @@ async def SelectCarrierOrCustomer(update: Update, context: ContextTypes.DEFAULT_
         return SELECT_CARRIER_OR_CUSTOMER
     
 async def HandleTypeOfDeliveryAskTYPE1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
+    if update.edited_message:
+        await update.edited_message.reply_text("⚠️ Редагування повідомлень заборонене.")
+        return ASK_TYPE
+    
     user_input = update.message.text
     print("Handle ytpe of delivery ask type 1 USER_INPUT: ", user_input)
 
@@ -155,6 +195,22 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("Будь ласка, введи відповідь ще раз")
         return ASK_TYPE
     
+    if update.message.text == "⏪ Назад":
+        current_step = context.user_data.get("step", 0)
+
+        if current_step > 1:
+            
+            context.user_data["step"] = current_step - 1
+            prev_key, prev_question = QUESTIONS3[current_step - 2]
+            await update.message.reply_text(
+                f"🔙 Добре, повертаємось.\n\n{prev_question}",
+                reply_markup=back_keyboard
+            )
+        else:
+            await update.message.reply_text("🔙 Ти вже на початку анкети.", reply_markup=back_keyboard)
+
+        return ASK_TYPE
+    
     user_input = update.message.text
     current_step = context.user_data.get("step", 0)
     print(current_step)
@@ -177,7 +233,7 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if current_step < len(QUESTIONS3):
         key, question = QUESTIONS3[current_step]
         print(current_step)
-        await update.message.reply_text(question)
+        await update.message.reply_text(question, reply_markup=back_keyboard)
         context.user_data["step"] = current_step + 1
         return ASK_TYPE
     else:
@@ -207,13 +263,33 @@ async def AskNext1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return AFTER_APPLICATION
 
 async def AskNext2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    
+    if update.edited_message:
+        await update.edited_message.reply_text("⚠️ Редагування повідомлень заборонене.")
+        return ASK_TYPE
+
+
     QUESTIONS = context.user_data.get("QUESTIONS")
     
     if not QUESTIONS:
         await update.message.reply_text("Не знайдено список питань. Почніть спочатку командою /start.")
         return ConversationHandler.END
     
+    if update.message.text == "⏪ Назад":
+        current_step = context.user_data.get("step", 0)
+
+        if current_step > 1:
+            
+            context.user_data["step"] = current_step - 1
+            prev_key, prev_question = QUESTIONS[current_step - 2]
+            await update.message.reply_text(
+                f"🔙 Добре, повертаємось.\n\n{prev_question}",
+                reply_markup=back_keyboard
+            )
+        else:
+            await update.message.reply_text("🔙 Ти вже на початку анкети.", reply_markup=back_keyboard)
+
+        return ASK_TYPE2
+
     user_input = update.message.text
 
     if not update.message or not update.message.text:
@@ -243,7 +319,7 @@ async def AskNext2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     
     if current_step < len(QUESTIONS):
         key, question = QUESTIONS[current_step]
-        await update.message.reply_text(question)
+        await update.message.reply_text(question, reply_markup=back_keyboard)
         context.user_data["step"] = current_step + 1
         return ASK_TYPE2
     else:
@@ -289,6 +365,11 @@ async def after_application(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     return AFTER_APPLICATION
 
 async def handle_after_application(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
+    if update.edited_message:
+        await update.edited_message.reply_text("⚠️ Редагування повідомлень заборонене.")
+        return ASK_TYPE
+    
     choice = update.message.text
     if choice == "Заповнити ще раз":
         return await start(update, context)
@@ -338,6 +419,7 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)],
     )
     application.add_handler(conv_handler)
+    application.add_error_handler(error_handler)
 
     while True:
         try: 
@@ -352,20 +434,3 @@ def main():
     
 if __name__ == "__main__":
     main()
-
-
-# TODO: I started only with замовник, пізніше добавлю перевізника.
-# шо тобі то дає? як ти будеш звязуватися з клієнтами. що просити, шоб лишили і тд. на рахунок замовника і перевізника. перше зроблю тільки замовника. номер телефону
-# перевізник. імпорт експорт україна
-# потрібно де здійснює перевезення
-
-# TODO: make a database tables
-# TODO!! make the first choice normal.
-# TODO: the input valid check.
-# TODO: добавити після заявки вибір між ще одним написання і завершенням.
-
-# TODO: перевірка для перевізника.
-
-# TODO: записує type_of_devliery замість їбучого міста. треба шось придумати сука.
-
-# TODO: як зробити перевірку останнього на edit?
