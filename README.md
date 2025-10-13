@@ -110,6 +110,7 @@ Submission process with Categories
 Замовник → що потрібно перевезти, куди, коли, особливі вимоги, документи (для міжнародних перевезень).
 
 
+<<<<<<< HEAD
 Так, ти майже правильно описав, але є кілька уточнень, щоб процес був логічно точний:
 
 ---
@@ -165,3 +166,5 @@ Submission process with Categories
 
 Хочеш, щоб я її зробив?
 >>>>>>> 68ce251 (Carrier.py working on)
+=======
+>>>>>>> 2ffbd9a (Beta1. Project working but with errors)
