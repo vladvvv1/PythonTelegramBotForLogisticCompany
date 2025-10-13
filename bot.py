@@ -11,18 +11,13 @@ from telegram.ext import (
     ContextTypes, 
     MessageHandler,
     TypeHandler,
-    
 )
 from config import save_application, send_to_broker
-# from handlers import start, carrier
 from config import telegram_token
 import traceback
 
 ASK_TYPE, SELECT_CARRIER_OR_CUSTOMER, ASK_TYPE2, AFTER_APPLICATION, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_1, HANDLE_TYPE_OF_DELIVERY_ASK_TYPE_2, EDITED_MESSAGE_HANDLER = range(7)
 CUSTOMER_OR_CERRIER = 0
-
-# 1 - carrier
-# 2 - customer
 
 QUESTIONS1 = (
     ("city", "Вкажіть місто забору (місто, вулиця, номер):"),
@@ -82,12 +77,10 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     
     print(f"⚠️ Помилка для користувача {user_id}: {type(error).__name__}: {error}")
     
-    # Логування повного трейсбеку
     with open("bot_errors.log", "a", encoding="utf-8") as f:
         f.write(f"\n{datetime.now()} - User {user_id}:\n")
         traceback.print_exception(type(error), error, error.__traceback__, file=f)
 
-    # Різні повідомлення для різних типів помилок
     error_message = "⚠️ Сталася технічна помилка. Спробуйте ще раз."
     
     if isinstance(error, NetworkError):
@@ -95,8 +88,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     elif isinstance(error, TimedOut):
         error_message = "⏰ Час очікування вийшов. Спробуйте ще раз."
     
-    
-    # Відправка повідомлення користувачу
     try:
         if update and hasattr(update, "message") and update.message:
             await update.message.reply_text(error_message)
@@ -267,7 +258,6 @@ async def AskNext2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.edited_message.reply_text("⚠️ Редагування повідомлень заборонене.")
         return ASK_TYPE
 
-
     QUESTIONS = context.user_data.get("QUESTIONS")
     
     if not QUESTIONS:
@@ -380,8 +370,6 @@ async def handle_after_application(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("Будь ласка, оберіть одну з опцій.")
         return AFTER_APPLICATION
     
-
-
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancels and end the whole conversation"""
     await update.message.reply_text("Розмова перервана")
@@ -414,7 +402,6 @@ def main():
             AFTER_APPLICATION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_after_application)
             ],
-            
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
