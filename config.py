@@ -27,6 +27,13 @@ def save_application(user_id: int, app_type: str, data: dict):
     }).execute()
 
 
+def refresh_session():
+    response = (
+        supabase.table("applications").select("").execute()
+    )
+
+    return "Data from supabase: " + response
+
 async def send_to_broker(user_id: int, app_type: str, data: dict):
     titles = {
         "domestic": "🚛 Заявка по Україні",

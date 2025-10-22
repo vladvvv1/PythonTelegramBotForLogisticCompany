@@ -1,5 +1,6 @@
 import time
 import re
+import schedule
 from datetime import datetime
 from telegram.error import NetworkError, TimedOut
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
@@ -12,7 +13,7 @@ from telegram.ext import (
     MessageHandler,
     TypeHandler,
 )
-from config import save_application, send_to_broker
+from config import save_application, send_to_broker, refresh_session
 from config import telegram_token
 import traceback
 
@@ -410,6 +411,9 @@ def main():
     while True:
         try: 
             application.run_polling(allowed_updates=Update.ALL_TYPES)
+            
+            schedule.every(10).seconds.do(refresh_session())
+            
             print("Bot connected.")
         except (NetworkError, TimedOut):
             print("Network error, retrying in 5 seconds...")
