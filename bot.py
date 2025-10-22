@@ -1,6 +1,7 @@
 import time
 import re
 import schedule
+import threading
 from datetime import datetime
 from telegram.error import NetworkError, TimedOut
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
@@ -376,10 +377,18 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     return ConversationHandler.END
 
+def schedule_runner():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
 def main():
     """run the bot."""
+    schedule.every(24).hours.do(refresh_session)
+    threading.Thread(target=schedule_runner, daemon=True).start()
 
     application = ApplicationBuilder().token(telegram_token).build()
+
     print("Bot connected.")
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -411,9 +420,7 @@ def main():
     while True:
         try: 
             application.run_polling(allowed_updates=Update.ALL_TYPES)
-            
-            schedule.every(10).seconds.do(refresh_session())
-            
+
             print("Bot connected.")
         except (NetworkError, TimedOut):
             print("Network error, retrying in 5 seconds...")

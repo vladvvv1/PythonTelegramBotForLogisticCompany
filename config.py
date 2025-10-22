@@ -28,11 +28,15 @@ def save_application(user_id: int, app_type: str, data: dict):
 
 
 def refresh_session():
-    response = (
-        supabase.table("applications").select("").execute()
-    )
-    print("Data from supabase: " + response)
-    return "Data from supabase: " + response
+    try:
+        response = supabase.table("applications").select("").execute()
+        print("Fetching data from supabase.")
+        return "Fetching data from supabase."
+    except Exception as e:
+        print("Error fetching data: ", e)
+        return None
+    
+
 
 async def send_to_broker(user_id: int, app_type: str, data: dict):
     titles = {
