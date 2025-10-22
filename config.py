@@ -31,7 +31,7 @@ def refresh_session():
     response = (
         supabase.table("applications").select("").execute()
     )
-
+    print("Data from supabase: " + response)
     return "Data from supabase: " + response
 
 async def send_to_broker(user_id: int, app_type: str, data: dict):
